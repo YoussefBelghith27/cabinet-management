@@ -1,0 +1,23 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Données d'exécution (logs, sauvegardes, identifiants de démo)
+/storage/logs/*
+/storage/backups/*
+/storage/tmp/*
+/storage/demo-credentials.txt
+!/storage/**/.gitkeep
+
+# OS / éditeurs
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Dépendances de test
+/tests/qr-decoder/node_modules/
+
+# Assistant local
+.claude/

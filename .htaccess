@@ -1,0 +1,5 @@
+# Sécurité : seul le dossier public/ doit être servi par Apache.
+# Configurez le DocumentRoot (VirtualHost) sur public/ — voir README.md.
+# Si le projet est copié tel quel dans htdocs, tout est bloqué sauf public/.
+Require all denied
+Options -Indexes

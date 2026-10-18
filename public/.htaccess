@@ -1,0 +1,19 @@
+Require all granted
+Options -Indexes -MultiViews
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
+
+<FilesMatch "\.(env|ini|log|sql|gz|bak|md|json|lock)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header always unset X-Powered-By
+    Header always set X-Content-Type-Options "nosniff"
+</IfModule>
+
+LimitRequestBody 2097152

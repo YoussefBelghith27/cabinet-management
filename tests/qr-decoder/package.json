@@ -1,0 +1,6 @@
+{
+  "name": "gestioncabinet-qr-decoder",
+  "private": true,
+  "description": "Test-only dependency: decodes generated QR codes to prove they scan. Never served by the site.",
+  "dependencies": { "jsqr": "1.4.0" }
+}
