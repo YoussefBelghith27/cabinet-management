@@ -9,6 +9,7 @@ final class Auth
 
     private const ACCOUNT_MAX_FAILS = 5;
     private const IP_MAX_FAILS = 30;
+    private const MFA_MAX_FAILS = 10;
     private const WINDOW = 900; // 15 minutes
 
     private static ?array $user = null;
@@ -106,6 +107,15 @@ final class Auth
             return false;
         }
 
+        // Per-account cap: a successful password login resets the login counter, so without it
+        // someone who knows the password could re-login every 5 codes and brute-force the TOTP.
+        $mfaKey = 'mfa:uid:' . $user['id'];
+        if (RateLimiter::tooMany($mfaKey, self::MFA_MAX_FAILS, self::WINDOW)) {
+            unset($_SESSION['mfa_pending']);
+            Audit::log('mfa_blocked', 'warning', [], (int) $user['clinic_id'], (int) $user['id']);
+            return false;
+        }
+
         $step = Totp::verify(Crypto::decrypt((string) $user['mfa_secret']), $code, (int) $user['mfa_last_step']);
         if ($step !== null) {
             Database::run('UPDATE users SET mfa_last_step = ? WHERE id = ?', [$step, $user['id']]);
@@ -120,6 +130,7 @@ final class Auth
         }
 
         $_SESSION['mfa_pending']['attempts']++;
+        RateLimiter::hit($mfaKey, self::WINDOW);
         Audit::log('mfa_failed', 'warning', [], (int) $user['clinic_id'], (int) $user['id']);
         if ($_SESSION['mfa_pending']['attempts'] >= 5) {
             unset($_SESSION['mfa_pending']);

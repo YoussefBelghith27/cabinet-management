@@ -14,6 +14,7 @@ require dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Crypto;
 use App\Core\Database;
+use App\Core\RateLimiter;
 use App\Core\Totp;
 
 $base = rtrim($argv[1] ?? (string) env('APP_URL', 'http://localhost:8080'), '/');
@@ -118,6 +119,19 @@ try {
     check('Admin 2FA accède au tableau de bord', $mfa->status === 200);
     $adminA = $mfa;
     $adminA->get('/dashboard');
+
+    // Re-logging in with the password must not reset the 2FA attempt counter
+    for ($round = 0; $round < 2; $round++) {
+        $guess = login($base, "admin-a-$suffix@test.test", $password);
+        for ($i = 0; $i < 5; $i++) {
+            $guess->post('/mfa', ['code' => '000000']);
+        }
+    }
+    $guess = login($base, "admin-a-$suffix@test.test", $password);
+    $guess->post('/mfa', ['code' => Totp::code($secret, intdiv(time(), 30) + 1)]);
+    check('2FA bloquée après 10 échecs, même en se reconnectant', $guess->location() === '/login', $guess->location());
+    check('Blocage 2FA journalisé (mfa_blocked)', (bool) Database::value("SELECT 1 FROM audit_log WHERE event = 'mfa_blocked' AND user_id = ?", [$A['users']['admin']]));
+    RateLimiter::clear('mfa:uid:' . $A['users']['admin']);
 
     // Deactivated account loses its session immediately
     $sec = login($base, "secretary-a-$suffix@test.test", $password);
