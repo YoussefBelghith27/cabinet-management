@@ -64,7 +64,8 @@ function registration_open(): bool
 /** True on Vercel: read-only file system, logs go to the platform, requests arrive through its proxy. */
 function serverless(): bool
 {
-    return getenv('VERCEL') !== false;
+    // VERCEL is only set when system variables are exposed; LAMBDA_TASK_ROOT always is (vercel-php).
+    return getenv('VERCEL') !== false || getenv('LAMBDA_TASK_ROOT') !== false;
 }
 
 function client_ip(): string
