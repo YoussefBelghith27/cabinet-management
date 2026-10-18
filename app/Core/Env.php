@@ -18,6 +18,9 @@ final class Env
             if (getenv('APP_KEY') !== false) {
                 return;
             }
+            if (serverless()) {
+                throw new \RuntimeException('Variable APP_KEY absente : ajoutez les variables dans Vercel > Settings > Environment Variables (environnement Production), puis redéployez.');
+            }
             throw new \RuntimeException('Fichier .env introuvable : copiez .env.example vers .env (ou lancez php database/install.php).');
         }
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {

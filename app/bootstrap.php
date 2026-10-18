@@ -16,6 +16,10 @@ spl_autoload_register(static function (string $class): void {
 
 require BASE_PATH . '/app/helpers.php';
 
+// Hidden until the configuration is loaded: a missing .env must not print server paths to visitors.
+if (PHP_SAPI !== 'cli') {
+    ini_set('display_errors', '0');
+}
 App\Core\Env::load(BASE_PATH . '/.env');
 
 date_default_timezone_set((string) env('APP_TIMEZONE', 'Africa/Tunis'));
