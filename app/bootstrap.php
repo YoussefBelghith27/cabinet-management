@@ -24,7 +24,9 @@ date_default_timezone_set((string) env('APP_TIMEZONE', 'Africa/Tunis'));
 error_reporting(E_ALL);
 ini_set('display_errors', env('APP_DEBUG', false) ? '1' : '0');
 ini_set('log_errors', '1');
-ini_set('error_log', BASE_PATH . '/storage/logs/php-error.log');
+if (!serverless()) {
+    ini_set('error_log', BASE_PATH . '/storage/logs/php-error.log'); // on Vercel: stderr → Vercel logs
+}
 ini_set('expose_php', '0');
 
 // Command-line scripts (install, backup, migration, tests): show the error instead of failing silently.

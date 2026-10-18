@@ -31,6 +31,9 @@ final class Session
             'httponly' => true,
             'samesite' => 'Lax',
         ]);
+        if (env('SESSION_DRIVER', 'file') === 'database') {
+            session_set_save_handler(new DbSessionHandler(self::absoluteSeconds()), true);
+        }
         session_start();
 
         $now = time();

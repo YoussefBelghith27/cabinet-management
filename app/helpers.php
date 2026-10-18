@@ -61,9 +61,23 @@ function registration_open(): bool
     return (bool) env('ALLOW_CLINIC_REGISTRATION', false);
 }
 
+/** True on Vercel: read-only file system, logs go to the platform, requests arrive through its proxy. */
+function serverless(): bool
+{
+    return getenv('VERCEL') !== false;
+}
+
 function client_ip(): string
 {
-    // REMOTE_ADDR only: X-Forwarded-For is client-controlled unless behind a trusted proxy.
+    // On Vercel, REMOTE_ADDR is the local runtime; Vercel's edge overwrites X-Real-IP with the real
+    // client address, so it can be trusted there. Elsewhere REMOTE_ADDR only: forwarded headers are
+    // client-controlled unless behind a trusted proxy.
+    if (serverless()) {
+        $ip = trim(explode(',', (string) ($_SERVER['HTTP_X_REAL_IP'] ?? ''))[0]);
+        if (filter_var($ip, FILTER_VALIDATE_IP)) {
+            return $ip;
+        }
+    }
     return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
 }
 

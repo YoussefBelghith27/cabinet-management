@@ -14,6 +14,10 @@ final class Env
     public static function load(string $file): void
     {
         if (!is_file($file)) {
+            // Hosting platforms (Vercel) inject the configuration as real environment variables.
+            if (getenv('APP_KEY') !== false) {
+                return;
+            }
             throw new \RuntimeException('Fichier .env introuvable : copiez .env.example vers .env (ou lancez php database/install.php).');
         }
         foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {

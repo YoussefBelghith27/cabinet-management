@@ -39,7 +39,9 @@ final class Audit
             'at' => date('c'), 'event' => $event, 'severity' => $severity, 'clinic' => $clinicId,
             'user' => $userId, 'ip' => $ip, 'details' => $details,
         ], JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-        @file_put_contents(BASE_PATH . '/storage/logs/security.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        if (!serverless()) {
+            @file_put_contents(BASE_PATH . '/storage/logs/security.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
 
         if ($severity === 'critical' || in_array($event, self::ALERT_EVENTS, true)) {
             self::alert($line);
@@ -48,7 +50,11 @@ final class Audit
 
     private static function alert(string $line): void
     {
-        @file_put_contents(BASE_PATH . '/storage/logs/alerts.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        if (serverless()) {
+            error_log('[ALERTE] ' . $line); // read-only file system: alerts go to the Vercel logs
+        } else {
+            @file_put_contents(BASE_PATH . '/storage/logs/alerts.log', $line . PHP_EOL, FILE_APPEND | LOCK_EX);
+        }
         $to = (string) env('ALERT_EMAIL', '');
         if ($to !== '' && filter_var($to, FILTER_VALIDATE_EMAIL) && function_exists('mail')) {
             @mail($to, '[' . env('APP_NAME', 'GestionCabinet') . '] Alerte sécurité', $line);

@@ -1,0 +1,10 @@
+# Jamais envoyé à Vercel : secrets, données locales, outils d'installation et de test
+.env
+.env.*
+!.env.example
+storage/
+tests/
+database/
+scripts/
+.claude/
+*.md

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["dub1"],
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.8.0",
+      "maxDuration": 15,
+      "excludeFiles": "{tests/**,database/**,scripts/**,storage/**,*.md,.env*}"
+    }
+  },
+  "routes": [
+    {
+      "src": "/assets/([a-z0-9/_-]+\\.(?:css|js|woff2))",
+      "dest": "/public/assets/$1",
+      "headers": {
+        "Cache-Control": "public, max-age=3600",
+        "X-Content-Type-Options": "nosniff"
+      }
+    },
+    { "src": "/(.*)", "dest": "/api/index.php" }
+  ]
+}

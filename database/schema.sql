@@ -185,6 +185,14 @@ create table if not exists audit_log (
   details text,
   created_at timestamptz not null default now()
 );
+-- PHP sessions when SESSION_DRIVER=database (serverless hosting). id = SHA-256 of the session ID.
+create table if not exists sessions (
+  id text primary key,
+  data text not null default '',
+  expires_at bigint not null
+);
+create index if not exists sessions_expires_idx on sessions (expires_at);
+
 create index if not exists audit_log_clinic_idx on audit_log (clinic_id, created_at);
 create index if not exists audit_log_event_idx on audit_log (event, created_at);
 
@@ -212,7 +220,7 @@ declare
   t text;
 begin
   foreach t in array array['clinics', 'patients', 'users', 'treatments', 'appointments', 'procedures',
-                           'invoices', 'invoice_items', 'payments', 'rate_limits', 'audit_log']
+                           'invoices', 'invoice_items', 'payments', 'rate_limits', 'audit_log', 'sessions']
   loop
     execute format('alter table %I enable row level security', t);
     execute format('drop policy if exists app_full_access on %I', t);
