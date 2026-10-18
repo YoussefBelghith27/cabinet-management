@@ -51,6 +51,11 @@ $email = "owner-$suffix@test.test";
 $password = 'Owner-' . bin2hex(random_bytes(5)) . '1';
 $clinicId = null;
 
+if (!registration_open()) {
+    fwrite(STDERR, "Ce test crée un cabinet via /register : mettez ALLOW_CLINIC_REGISTRATION=true dans .env (puis redémarrez le serveur).\n");
+    exit(1);
+}
+
 try {
     echo "\n\033[1mInscription & sécurité du compte\033[0m\n";
     $admin = new Client($base);

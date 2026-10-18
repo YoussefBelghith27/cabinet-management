@@ -14,7 +14,7 @@ $flashes = Session::takeFlash();
 <body class="public">
   <header class="public-header">
     <a href="/" class="brand"><span class="brand-mark" aria-hidden="true">◗</span> <?= e(env('APP_NAME', 'GestionCabinet')) ?></a>
-    <nav><a href="/login">Connexion</a> <a class="btn btn-primary btn-sm" href="/register">Créer mon cabinet</a></nav>
+    <nav><a href="/login">Connexion</a> <?php if (registration_open()): ?><a class="btn btn-primary btn-sm" href="/register">Créer mon cabinet</a><?php endif; ?></nav>
   </header>
   <main class="public-main">
     <?php foreach ($flashes as $f): ?>

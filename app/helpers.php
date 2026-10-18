@@ -55,6 +55,12 @@ function abort(int $status, string $message = ''): never
     throw new HttpException($status, $message);
 }
 
+/** Self-service creation of new clinics (tenants). Off by default: a single-clinic deployment must not let strangers sign up. */
+function registration_open(): bool
+{
+    return (bool) env('ALLOW_CLINIC_REGISTRATION', false);
+}
+
 function client_ip(): string
 {
     // REMOTE_ADDR only: X-Forwarded-For is client-controlled unless behind a trusted proxy.

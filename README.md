@@ -113,7 +113,7 @@ Les deux créent leurs propres données de test et les suppriment ensuite.
 ### ✅ 4. Protection des secrets
 - Secrets dans `.env` (hors du dossier web, **exclu de Git** via `.gitignore`) ; les variables d’environnement réelles sont prioritaires en production.
 - Aucun secret dans le frontend ; l’application se connecte avec le rôle `cabinet_app` (**jamais `postgres`**), en TLS (`DB_SSLMODE`, `verify-full` possible avec le certificat Supabase).
-- Tables dans un **schéma privé** + **Row Level Security** : la clé publique (`anon`) de Supabase ne donne accès à aucune donnée.
+- Tables dans un **schéma privé** + **Row Level Security** : la clé publique (`anon`) de Supabase ne donne accès à aucune donnée. La politique RLS autorise le seul rôle `cabinet_app` ; l’**isolation entre cabinets** est assurée par l’application (chaque requête filtrée par `clinic_id`, accès croisés journalisés).
 - Mots de passe de sauvegarde passés par fichier temporaire, jamais en ligne de commande.
 
 ### ✅ 5. Protection de l’API
@@ -123,7 +123,7 @@ Les deux créent leurs propres données de test et les suppriment ensuite.
 - Erreurs propres en JSON/HTML avec un **numéro de référence** ; détails techniques uniquement dans `storage/logs/php-error.log`.
 
 ### ✅ 6. Sauvegardes et surveillance
-- **Sauvegarde testée** : `scripts/backup.php` exporte toutes les tables dans un instantané cohérent (COPY, sans `pg_dump`), compresse, puis **restaure dans un schéma temporaire** (contraintes et clés étrangères comprises) et compare les données ; rotation sur 14 jours.
+- **Sauvegarde testée** : `scripts/backup.php` exporte toutes les tables dans un instantané cohérent (COPY, sans `pg_dump`), compresse, **chiffre (AES-256-GCM, clé `APP_KEY`)**, puis déchiffre et **restaure dans un schéma temporaire** (contraintes et clés étrangères comprises) et compare les données ; rotation sur 14 jours.
 - **Journal de sécurité** (table `audit_log` + `storage/logs/security.log`) : connexions, échecs, verrouillages, 2FA, accès refusés, tentatives inter-cabinets, CSRF, limitations, changements d’équipe/paramètres, paiements.
 - **Alertes** (`storage/logs/alerts.log` + e-mail si `ALERT_EMAIL` est configuré) : verrouillage de compte, tentative inter-cabinets, échecs 2FA répétés, désactivation 2FA, échec de sauvegarde.
 - Écran **Journal de sécurité** pour l’administrateur de chaque cabinet.
@@ -132,7 +132,12 @@ Les deux créent leurs propres données de test et les suppriment ensuite.
 ```bash
 schtasks /Create /TN "GestionCabinet Backup" /SC DAILY /ST 02:00 /TR "C:\xampp\php\php.exe C:\Users\ASUS\Desktop\GestionCabinet\scripts\backup.php"
 ```
-Copiez ensuite `storage/backups/` **hors de la machine** (disque externe, cloud chiffré) : une sauvegarde sur le même disque ne protège ni du vol ni d’une panne.
+Copiez ensuite `storage/backups/` **hors de la machine** (disque externe, cloud) : une sauvegarde sur le même disque ne protège ni du vol ni d’une panne.
+
+Les fichiers `*.json.gz.enc` sont chiffrés : **conservez `APP_KEY` à part** (gestionnaire de mots de passe), sans elle aucune sauvegarde n’est lisible. Pour relire une sauvegarde :
+```bash
+C:/xampp/php/php.exe scripts/decrypt_backup.php storage/backups/<fichier>.json.gz.enc
+```
 
 ---
 
@@ -145,6 +150,7 @@ Copiez ensuite `storage/backups/` **hors de la machine** (disque externe, cloud 
 5. XAMPP est un outil de **développement** : en production, utilisez un serveur Linux (Apache/Nginx + PHP-FPM + MySQL) ou un hébergeur PHP sérieux, idéalement dans la même région que la base Supabase (latence).
 6. Données de santé : vérifiez vos obligations légales (en Tunisie : loi organique 2004-63 et INPDP ; en Europe : RGPD + hébergeur certifié HDS).
 7. Supprimer le cabinet de démo et `storage/demo-credentials.txt`.
+8. Laisser `ALLOW_CLINIC_REGISTRATION=false` (défaut) pour un cabinet unique : `/register` répond 404 et personne ne peut créer de cabinet dans votre base. Ne passer à `true` que pour une offre SaaS ouverte.
 
 ## Structure
 
@@ -154,7 +160,7 @@ app/Controllers/  un contrôleur par module
 app/Views/        vues PHP (sorties échappées avec e())
 public/           seul dossier exposé : index.php (contrôleur frontal) + assets
 database/         schema.sql (PostgreSQL), install.php, seed.php, migrate_from_mysql.php
-scripts/          backup.php
+scripts/          backup.php (sauvegarde chiffrée + test de restauration), decrypt_backup.php
 storage/          logs, sauvegardes (non versionnés)
 tests/            tests de sécurité et fonctionnels de bout en bout
 ```

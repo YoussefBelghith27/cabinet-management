@@ -23,11 +23,17 @@ final class HomeController extends Controller
 
     public function registerForm(): void
     {
+        if (!registration_open()) {
+            abort(404);
+        }
         $this->view('auth/register', ['title' => 'Créer mon cabinet'], 'public');
     }
 
     public function register(): void
     {
+        if (!registration_open()) {
+            abort(404);
+        }
         $this->rateLimit('register:' . client_ip(), 5, 3600);
 
         [$data, $errors] = Validator::make($_POST, [

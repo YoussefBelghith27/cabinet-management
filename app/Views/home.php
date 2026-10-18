@@ -2,8 +2,12 @@
   <h1>Votre cabinet dentaire, organisé simplement.</h1>
   <p>Agenda, dossiers patients, facturation et prise de rendez-vous en ligne — dans une plateforme sécurisée, pensée pour les dentistes et leurs assistants.</p>
   <div class="actions actions-center">
+    <?php if (registration_open()): ?>
     <a class="btn btn-primary" href="/register">Créer mon cabinet</a>
     <a class="btn btn-ghost" href="/login">J’ai déjà un compte</a>
+    <?php else: ?>
+    <a class="btn btn-primary" href="/login">Se connecter</a>
+    <?php endif; ?>
   </div>
 
   <?php

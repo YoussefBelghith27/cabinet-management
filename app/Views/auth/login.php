@@ -25,7 +25,9 @@
       </div>
       <button class="btn btn-primary btn-block login-submit" type="submit">Se connecter</button>
     </form>
+    <?php if (registration_open()): ?>
     <p class="muted small login-alt">Pas encore de compte ? <a href="/register">Créer mon cabinet</a></p>
+    <?php endif; ?>
   </div>
 
   <ul class="trust-row reveal" aria-label="Sécurité">

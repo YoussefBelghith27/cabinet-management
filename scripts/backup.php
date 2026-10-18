@@ -9,7 +9,10 @@ declare(strict_types=1);
  *   php scripts/backup.php --no-verify
  *
  * Fonctionne sans pg_dump (absent de XAMPP) : chaque table est exportée avec COPY, dans un seul
- * instantané cohérent (transaction REPEATABLE READ), vers storage/backups/*.json.gz.
+ * instantané cohérent (transaction REPEATABLE READ), vers storage/backups/*.json.gz.enc.
+ * Les fichiers contiennent des données de santé : ils sont chiffrés (AES-256-GCM, clé APP_KEY).
+ * Gardez une copie de APP_KEY hors de ce PC (gestionnaire de mots de passe) : sans elle, aucune
+ * sauvegarde n'est lisible. Déchiffrement : php scripts/decrypt_backup.php <fichier.json.gz.enc>
  * Le plan gratuit de Supabase n'inclut pas de sauvegardes : ce script est votre filet de sécurité.
  * À planifier chaque nuit (Planificateur de tâches Windows ou cron) — voir README.md.
  */
@@ -20,6 +23,7 @@ if (PHP_SAPI !== 'cli') {
 require dirname(__DIR__) . '/app/bootstrap.php';
 
 use App\Core\Audit;
+use App\Core\Crypto;
 use App\Core\Database;
 
 // Parents before children, so a restore satisfies foreign keys.
@@ -68,8 +72,13 @@ try {
     fail('backup_failed', 'Export : ' . $e->getMessage());
 }
 
-$file = "$backupDir/" . env('DB_NAME', 'postgres') . "-$schema-" . date('Ymd-His') . '.json.gz';
-if (file_put_contents($file, gzencode(json_encode($dump, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 9)) === false) {
+$file = "$backupDir/" . env('DB_NAME', 'postgres') . "-$schema-" . date('Ymd-His') . '.json.gz.enc';
+try {
+    $payload = Crypto::encrypt(gzencode(json_encode($dump, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 9));
+} catch (Throwable $e) {
+    fail('backup_failed', 'Chiffrement : ' . $e->getMessage());
+}
+if (file_put_contents($file, $payload) === false) {
     fail('backup_failed', "Écriture impossible : $file");
 }
 $counts = array_map(fn ($t) => count($t['rows']), $dump['tables']);
@@ -77,7 +86,8 @@ echo '✔ Sauvegarde : ' . basename($file) . ' (' . round(filesize($file) / 1024
 
 // 2. Verify: restore the file just written into a throwaway schema and compare row counts
 if ($verify) {
-    $restored = json_decode((string) gzdecode((string) file_get_contents($file)), true);
+    // Decrypts the file on disk: also proves the backup is readable with the current APP_KEY.
+    $restored = json_decode((string) gzdecode(Crypto::decrypt((string) file_get_contents($file))), true);
     $test = Database::ident($schema . '_restore_test');
     try {
         $pdo->exec("DROP SCHEMA IF EXISTS $test CASCADE");
@@ -108,7 +118,7 @@ if ($verify) {
 
 // 3. Rotation
 $removed = 0;
-foreach (glob("$backupDir/*.json.gz") as $old) {
+foreach (glob("$backupDir/*.json.gz*") ?: [] as $old) {
     if (filemtime($old) < time() - $keepDays * 86400) {
         unlink($old);
         $removed++;
